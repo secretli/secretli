@@ -7,21 +7,29 @@ import (
 )
 
 func createRetrieveCmd(store *internal.HTTPRemoteStore) *cobra.Command {
-	description := `Retrieve a shared secret
+	var password bool
+
+	cmd := &cobra.Command{
+		Use:   "retrieve [share secret]",
+		Short: "Retrieve a shared secret",
+		Long: `Retrieve a shared secret
 
 Use a share secret to retrieve a secret from the remote store.
 The secret is decrypted on your computer.
 
 The share secret is never sent to the server!
-`
-
-	return &cobra.Command{
-		Use:   "retrieve [share secret]",
-		Short: "Retrieve a shared secret",
-		Long:  description,
-		Args:  cobra.ExactArgs(1),
+`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			subkeys, err := internal.KeySetFromString(args[0])
+			var err error
+			var subkeys internal.KeySet
+
+			if password {
+				pwd := internal.GetPasswordFromTerminalOrDie()
+				subkeys, err = internal.KeySetWithPasswordFromString(args[0], pwd)
+			} else {
+				subkeys, err = internal.KeySetFromString(args[0])
+			}
 			if err != nil {
 				return err
 			}
@@ -40,4 +48,8 @@ The share secret is never sent to the server!
 			return nil
 		},
 	}
+
+	cmd.Flags().BoolVarP(&password, "password", "p", false, "ask for password")
+
+	return cmd
 }

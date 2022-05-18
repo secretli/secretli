@@ -13,7 +13,7 @@ import (
 
 const (
 	defaultBaseURL = "https://gphrase.de/s/"
-	userAgent      = "secretli-secretli-cli"
+	userAgent      = "secretli-cli"
 )
 
 type Client struct {

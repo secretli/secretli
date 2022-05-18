@@ -7,21 +7,29 @@ import (
 )
 
 func createShareCmd(store *internal.HTTPRemoteStore) *cobra.Command {
-	description := `Share a secret securely
+	var password bool
+
+	cmd := &cobra.Command{
+		Use:   "share [plaintext]",
+		Short: "Share a secret securely",
+		Long: `Share a secret securely
 
 Share a given secret and provide a user with a share secret.
 This share secret allows someone else to retrieve this secret.
 
 The share secret is never sent to the server!
-`
-
-	return &cobra.Command{
-		Use:   "share [plaintext]",
-		Short: "Share a secret securely",
-		Long:  description,
-		Args:  cobra.ExactArgs(1),
+`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			subkeys, err := internal.NewRandomKeySet()
+			var err error
+			var subkeys internal.KeySet
+
+			if password {
+				pwd := internal.GetPasswordFromTerminalOrDie()
+				subkeys, err = internal.NewRandomKeySetWithPassword(pwd)
+			} else {
+				subkeys, err = internal.NewRandomKeySet()
+			}
 			if err != nil {
 				return err
 			}
@@ -40,4 +48,8 @@ The share secret is never sent to the server!
 			return nil
 		},
 	}
+
+	cmd.Flags().BoolVarP(&password, "password", "p", false, "ask for password")
+
+	return cmd
 }

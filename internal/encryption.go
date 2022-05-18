@@ -8,6 +8,7 @@ import (
 	"encoding/base64"
 	"github.com/hashicorp/go-multierror"
 	"golang.org/x/crypto/hkdf"
+	"golang.org/x/crypto/pbkdf2"
 	"io"
 )
 
@@ -32,12 +33,44 @@ func NewRandomKeySet() (KeySet, error) {
 	return deriveKeysFromBytes(shareSecret)
 }
 
+func NewRandomKeySetWithPassword(password string) (KeySet, error) {
+	shareSecret, err := generateRandomBytes(32)
+	if err != nil {
+		return KeySet{}, err
+	}
+
+	masterKey := pbkdf2.Key([]byte(password), shareSecret, 100000, 32, sha512.New)
+	keySet, err := deriveKeysFromBytes(masterKey)
+	if err != nil {
+		return KeySet{}, err
+	}
+
+	keySet.shareSecret = shareSecret
+	return keySet, nil
+}
+
 func KeySetFromString(key string) (KeySet, error) {
 	shareSecret, err := decode(key)
 	if err != nil {
 		return KeySet{}, err
 	}
 	return deriveKeysFromBytes(shareSecret)
+}
+
+func KeySetWithPasswordFromString(key string, password string) (KeySet, error) {
+	shareSecret, err := decode(key)
+	if err != nil {
+		return KeySet{}, err
+	}
+
+	masterKey := pbkdf2.Key([]byte(password), shareSecret, 100000, 32, sha512.New)
+	keySet, err := deriveKeysFromBytes(masterKey)
+	if err != nil {
+		return KeySet{}, err
+	}
+
+	keySet.shareSecret = shareSecret
+	return keySet, nil
 }
 
 func (k KeySet) ShareSecret() string {
