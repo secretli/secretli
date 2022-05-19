@@ -9,6 +9,7 @@ import (
 
 func createShareCmd() *cobra.Command {
 	var password bool
+	var expiration string
 
 	cmd := &cobra.Command{
 		Use:   "share [plaintext]",
@@ -19,8 +20,24 @@ Share a given secret and provide a user with a share secret.
 This share secret allows someone else to retrieve this secret.
 
 The share secret is never sent to the server!
+
+Expiration Time:
+A user can select the following expiration times (default: 5 minutes).
+
+ - Minutes: 5m, 10m, 15m
+ - Hours: 1h, 4h, 12h
+ - Days: 1d, 3d, 7d
+
 `,
 		Args: cobra.ExactArgs(1),
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			switch expiration {
+			case "5m", "10m", "15m", "1h", "4h", "12h", "1d", "3d", "7d":
+				return nil
+			default:
+				return fmt.Errorf("invalid expiraton time selected: %s", expiration)
+			}
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args[0]) > 5000 {
 				return errors.New("secret is too large (> 5000)")
@@ -50,7 +67,7 @@ The share secret is never sent to the server!
 				return err
 			}
 
-			err = store.Store(subkeys, encrypted)
+			err = store.Store(subkeys, encrypted, expiration)
 			if err != nil {
 				return err
 			}
@@ -61,6 +78,6 @@ The share secret is never sent to the server!
 	}
 
 	cmd.Flags().BoolVarP(&password, "password", "p", false, "ask for password")
-
+	cmd.Flags().StringVarP(&expiration, "expiration", "e", "5m", "expiration time of secret")
 	return cmd
 }

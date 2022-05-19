@@ -12,7 +12,7 @@ func NewHTTPRemoteStore(client *Client) *HTTPRemoteStore {
 	return &HTTPRemoteStore{client: client}
 }
 
-func (s *HTTPRemoteStore) Store(keySet KeySet, data EncryptedData) error {
+func (s *HTTPRemoteStore) Store(keySet KeySet, data EncryptedData, expiration string) error {
 	type request struct {
 		PublicID       string `json:"public_id"`
 		RetrievalToken string `json:"retrieval_token"`
@@ -26,7 +26,7 @@ func (s *HTTPRemoteStore) Store(keySet KeySet, data EncryptedData) error {
 		RetrievalToken: keySet.RetrievalToken(),
 		Nonce:          data.Nonce,
 		EncryptedData:  data.Cipher,
-		Expiration:     "5min",
+		Expiration:     expiration,
 	}
 
 	req, err := s.client.NewRequest(http.MethodPost, "api/secret", dto)
