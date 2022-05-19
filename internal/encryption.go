@@ -22,6 +22,7 @@ type KeySet struct {
 	shareKey       []byte
 	publicID       []byte
 	retrievalToken []byte
+	deletionToken  []byte
 	cipher         cipher.AEAD
 }
 
@@ -85,6 +86,10 @@ func (k KeySet) RetrievalToken() string {
 	return encode(k.retrievalToken)
 }
 
+func (k KeySet) DeletionToken() string {
+	return encode(k.deletionToken)
+}
+
 func (k KeySet) Encrypt(plaintext string) (data EncryptedData, err error) {
 	nonce, err := generateRandomBytes(k.cipher.NonceSize())
 	if err != nil {
@@ -129,8 +134,9 @@ func deriveKeysFromBytes(key []byte) (KeySet, error) {
 	shareKey, err1 := deriveSubkey(key, "share_item_encryption_key", 32)
 	publicID, err2 := deriveSubkey(key, "share_item_uuid", 16)
 	retrievalToken, err3 := deriveSubkey(key, "share_item_token", 16)
+	deletionToken, err4 := generateRandomBytes(16)
 
-	err := multierror.Append(err1, err2, err3).ErrorOrNil()
+	err := multierror.Append(err1, err2, err3, err4).ErrorOrNil()
 	if err != nil {
 		return KeySet{}, err
 	}
@@ -145,6 +151,7 @@ func deriveKeysFromBytes(key []byte) (KeySet, error) {
 		shareKey:       shareKey,
 		publicID:       publicID,
 		retrievalToken: retrievalToken,
+		deletionToken:  deletionToken,
 		cipher:         gcm,
 	}, nil
 }

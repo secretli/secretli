@@ -16,6 +16,7 @@ func (s *HTTPRemoteStore) Store(keySet KeySet, data EncryptedData, expiration st
 	type request struct {
 		PublicID       string `json:"public_id"`
 		RetrievalToken string `json:"retrieval_token"`
+		DeletionToken  string `json:"deletion_token"`
 		Nonce          string `json:"nonce"`
 		EncryptedData  string `json:"encrypted_data"`
 		Expiration     string `json:"expiration"`
@@ -25,6 +26,7 @@ func (s *HTTPRemoteStore) Store(keySet KeySet, data EncryptedData, expiration st
 	dto := request{
 		PublicID:       keySet.PublicID(),
 		RetrievalToken: keySet.RetrievalToken(),
+		DeletionToken:  keySet.DeletionToken(),
 		Nonce:          data.Nonce,
 		EncryptedData:  data.Cipher,
 		Expiration:     expiration,
@@ -62,4 +64,19 @@ func (s *HTTPRemoteStore) Load(keySet KeySet) (EncryptedData, error) {
 		Nonce:  dto.Nonce,
 		Cipher: dto.EncryptedData,
 	}, nil
+}
+
+func (s *HTTPRemoteStore) Delete(keySet KeySet, deletionToken string) error {
+	req, err := s.client.NewRequest(http.MethodDelete, "api/secret/"+keySet.PublicID(), nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("X-Retrieval-Token", keySet.RetrievalToken())
+	req.Header.Set("X-Deletion-Token", deletionToken)
+
+	_, err = s.client.Do(req, nil)
+	if err != nil {
+		return err
+	}
+	return nil
 }
