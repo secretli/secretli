@@ -10,6 +10,7 @@ import (
 func createShareCmd() *cobra.Command {
 	var password bool
 	var expiration string
+	var burnAfterRead bool
 
 	cmd := &cobra.Command{
 		Use:   "share",
@@ -71,7 +72,7 @@ A user can select the following expiration times (default: 5 minutes).
 				return err
 			}
 
-			err = store.Store(subkeys, encrypted, expiration)
+			err = store.Store(subkeys, encrypted, expiration, burnAfterRead)
 			if err != nil {
 				return err
 			}
@@ -83,5 +84,7 @@ A user can select the following expiration times (default: 5 minutes).
 
 	cmd.Flags().BoolVarP(&password, "password", "p", false, "ask for password")
 	cmd.Flags().StringVarP(&expiration, "expiration", "e", "5m", "expiration time of secret")
+	cmd.Flags().BoolVar(&burnAfterRead, "burn-after-read", false, "burn the secret after reading")
+
 	return cmd
 }

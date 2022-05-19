@@ -12,13 +12,14 @@ func NewHTTPRemoteStore(client *Client) *HTTPRemoteStore {
 	return &HTTPRemoteStore{client: client}
 }
 
-func (s *HTTPRemoteStore) Store(keySet KeySet, data EncryptedData, expiration string) error {
+func (s *HTTPRemoteStore) Store(keySet KeySet, data EncryptedData, expiration string, burnAfterRead bool) error {
 	type request struct {
 		PublicID       string `json:"public_id"`
 		RetrievalToken string `json:"retrieval_token"`
 		Nonce          string `json:"nonce"`
 		EncryptedData  string `json:"encrypted_data"`
 		Expiration     string `json:"expiration"`
+		BurnAfterRead  bool   `json:"burn_after_read"`
 	}
 
 	dto := request{
@@ -27,6 +28,7 @@ func (s *HTTPRemoteStore) Store(keySet KeySet, data EncryptedData, expiration st
 		Nonce:          data.Nonce,
 		EncryptedData:  data.Cipher,
 		Expiration:     expiration,
+		BurnAfterRead:  burnAfterRead,
 	}
 
 	req, err := s.client.NewRequest(http.MethodPost, "api/secret", dto)
