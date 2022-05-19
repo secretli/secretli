@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"github.com/secretli/secretli/internal"
 	"github.com/spf13/cobra"
@@ -21,6 +22,10 @@ The share secret is never sent to the server!
 `,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args[0]) > 5000 {
+				return errors.New("secret is too large (> 5000)")
+			}
+
 			var err error
 			var subkeys internal.KeySet
 
