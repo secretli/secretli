@@ -77,8 +77,14 @@ A user can select the following expiration times (default: 5 minutes).
 				return err
 			}
 
-			fmt.Println(subkeys.ShareSecret())
-			fmt.Println(subkeys.DeletionToken())
+			fmt.Println("Success!")
+			fmt.Println()
+			fmt.Println("Want to retrieve your secret?")
+			fmt.Printf("$ secretli retrieve '%s'\n", subkeys.ShareSecret())
+			fmt.Println()
+			fmt.Println("Have to delete your secret?")
+			fmt.Printf("$ secretli delete '%s' '%s'\n", subkeys.ShareSecret(), subkeys.DeletionToken())
+			fmt.Println()
 			return nil
 		},
 	}
