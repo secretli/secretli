@@ -77,13 +77,23 @@ A user can select the following expiration times (default: 5 minutes).
 				return err
 			}
 
+			baseUrlInOutput := ""
+			if baseUrl != "" {
+				baseUrlInOutput = fmt.Sprintf("--base-url '%s' ", baseUrl)
+			}
+
+			pwdFlagInOutput := ""
+			if password {
+				pwdFlagInOutput = "-p "
+			}
+
 			fmt.Println("Success!")
 			fmt.Println()
 			fmt.Println("Want to retrieve your secret?")
-			fmt.Printf("$ secretli retrieve '%s'\n", subkeys.ShareSecret())
+			fmt.Printf("$ secretli %sretrieve %s'%s'\n", baseUrlInOutput, pwdFlagInOutput, subkeys.ShareSecret())
 			fmt.Println()
 			fmt.Println("Have to delete your secret?")
-			fmt.Printf("$ secretli delete '%s' '%s'\n", subkeys.ShareSecret(), subkeys.DeletionToken())
+			fmt.Printf("$ secretli %sdelete %s'%s' '%s'\n", baseUrlInOutput, pwdFlagInOutput, subkeys.ShareSecret(), subkeys.DeletionToken())
 			fmt.Println()
 			return nil
 		},
