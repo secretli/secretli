@@ -19,3 +19,17 @@ func GetPasswordFromTerminalOrDie() string {
 
 	return strings.TrimSpace(string(password))
 }
+
+func SetupStore(baseUrl string) (*HTTPRemoteStore, error) {
+	var baseUrlFunc ClientOptionFunc
+	if baseUrl != "" {
+		baseUrlFunc = WithBaseURL(baseUrl)
+	}
+
+	client, err := NewClient(baseUrlFunc)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewHTTPRemoteStore(client), nil
+}

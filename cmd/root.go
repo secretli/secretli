@@ -1,23 +1,16 @@
 package cmd
 
 import (
-	"github.com/secretli/secretli/internal"
-	"log"
 	"os"
 
 	"github.com/spf13/cobra"
 )
 
 func Execute() {
-	store, err := setupStore()
-	if err != nil {
-		log.Fatalln(err)
-	}
-
 	rootCmd := createRootCmd()
 	rootCmd.AddCommand(
-		createShareCmd(store),
-		createRetrieveCmd(store),
+		createShareCmd(),
+		createRetrieveCmd(),
 	)
 
 	if err := rootCmd.Execute(); err != nil {
@@ -26,16 +19,12 @@ func Execute() {
 }
 
 func createRootCmd() *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "secretli",
 		Short: "Share secrets easily and securely across the internet.",
 	}
-}
 
-func setupStore() (*internal.HTTPRemoteStore, error) {
-	client, err := internal.NewClient()
-	if err != nil {
-		return nil, err
-	}
-	return internal.NewHTTPRemoteStore(client), nil
+	cmd.PersistentFlags().String("base-url", "", "use different server")
+
+	return cmd
 }
