@@ -11,6 +11,7 @@ func Execute() {
 	rootCmd.AddCommand(
 		createShareCmd(),
 		createRetrieveCmd(),
+		createDeleteCmd(),
 	)
 
 	if err := rootCmd.Execute(); err != nil {

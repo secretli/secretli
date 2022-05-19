@@ -78,6 +78,7 @@ A user can select the following expiration times (default: 5 minutes).
 			}
 
 			fmt.Println(subkeys.ShareSecret())
+			fmt.Println(subkeys.DeletionToken())
 			return nil
 		},
 	}
