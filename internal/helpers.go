@@ -3,13 +3,22 @@ package internal
 import (
 	"fmt"
 	"golang.org/x/term"
+	"io"
 	"os"
 	"strings"
 	"syscall"
 )
 
+func ReadFromStdin() (string, error) {
+	bytes, err := io.ReadAll(os.Stdin)
+	if err != nil {
+		return "", err
+	}
+	return string(bytes), nil
+}
+
 func GetPasswordFromTerminalOrDie() string {
-	fmt.Print("Enter Password: ")
+	fmt.Print("\nEnter Password: ")
 	password, err := term.ReadPassword(syscall.Stdin)
 	fmt.Println()
 

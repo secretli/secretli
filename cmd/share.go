@@ -12,13 +12,14 @@ func createShareCmd() *cobra.Command {
 	var expiration string
 
 	cmd := &cobra.Command{
-		Use:   "share [plaintext]",
+		Use:   "share",
 		Short: "Share a secret securely",
 		Long: `Share a secret securely
 
 Share a given secret and provide a user with a share secret.
 This share secret allows someone else to retrieve this secret.
 
+The secret is read from stdin.
 The share secret is never sent to the server!
 
 Expiration Time:
@@ -29,7 +30,7 @@ A user can select the following expiration times (default: 5 minutes).
  - Days: 1d, 3d, 7d
 
 `,
-		Args: cobra.ExactArgs(1),
+		Args: cobra.NoArgs,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			switch expiration {
 			case "5m", "10m", "15m", "1h", "4h", "12h", "1d", "3d", "7d":
@@ -39,12 +40,14 @@ A user can select the following expiration times (default: 5 minutes).
 			}
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args[0]) > 5000 {
-				return errors.New("secret is too large (> 5000)")
+			plaintext, err := internal.ReadFromStdin()
+			if err != nil {
+				return fmt.Errorf("error reading secret: %w", err)
 			}
 
-			var err error
-			var subkeys internal.KeySet
+			if len(plaintext) > 5000 {
+				return errors.New("secret is too large (> 5000)")
+			}
 
 			baseUrl, _ := cmd.Flags().GetString("base-url")
 			store, err := internal.SetupStore(baseUrl)
@@ -52,6 +55,7 @@ A user can select the following expiration times (default: 5 minutes).
 				return err
 			}
 
+			var subkeys internal.KeySet
 			if password {
 				pwd := internal.GetPasswordFromTerminalOrDie()
 				subkeys, err = internal.NewRandomKeySetWithPassword(pwd)
@@ -62,7 +66,7 @@ A user can select the following expiration times (default: 5 minutes).
 				return err
 			}
 
-			encrypted, err := subkeys.Encrypt(args[0])
+			encrypted, err := subkeys.Encrypt(plaintext)
 			if err != nil {
 				return err
 			}
