@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func createRetrieveCmd(store *internal.HTTPRemoteStore) *cobra.Command {
+func createRetrieveCmd() *cobra.Command {
 	var password bool
 
 	cmd := &cobra.Command{
@@ -23,6 +23,12 @@ The share secret is never sent to the server!
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var err error
 			var subkeys internal.KeySet
+
+			baseUrl, _ := cmd.Flags().GetString("base-url")
+			store, err := internal.SetupStore(baseUrl)
+			if err != nil {
+				return err
+			}
 
 			if password {
 				pwd := internal.GetPasswordFromTerminalOrDie()
