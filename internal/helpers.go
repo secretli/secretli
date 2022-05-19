@@ -2,11 +2,11 @@ package internal
 
 import (
 	"fmt"
-	"golang.org/x/term"
+	"github.com/mattn/go-tty"
 	"io"
+	"log"
 	"os"
 	"strings"
-	"syscall"
 )
 
 func ReadFromStdin() (string, error) {
@@ -18,15 +18,19 @@ func ReadFromStdin() (string, error) {
 }
 
 func GetPasswordFromTerminalOrDie() string {
-	fmt.Print("\nEnter Password: ")
-	password, err := term.ReadPassword(syscall.Stdin)
-	fmt.Println()
-
+	tty, err := tty.Open()
 	if err != nil {
-		os.Exit(2)
+		log.Fatalln(err)
+	}
+	defer tty.Close()
+
+	fmt.Fprint(tty.Output(), "Enter Password: ")
+	password, err := tty.ReadPassword()
+	if err != nil {
+		log.Fatalln(err)
 	}
 
-	return strings.TrimSpace(string(password))
+	return strings.TrimSpace(password)
 }
 
 func SetupStore(baseUrl string) (*HTTPRemoteStore, error) {
