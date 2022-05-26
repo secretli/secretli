@@ -157,7 +157,7 @@ func deriveKeysFromBytes(key []byte) (KeySet, error) {
 }
 
 func deriveSubkey(key []byte, info string, length int) ([]byte, error) {
-	reader := hkdf.Expand(sha512.New, key, []byte(info))
+	reader := hkdf.New(sha512.New, key, nil, []byte(info))
 	result := make([]byte, length)
 	_, err := io.ReadFull(reader, result)
 	return result, err
