@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	defaultBaseURL = "https://gphrase.de/s/"
+	defaultBaseURL = "https://patrickscheid.de/s/"
 	userAgent      = "secretli-cli"
 )
 
