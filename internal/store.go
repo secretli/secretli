@@ -7,7 +7,7 @@ import (
 
 const (
 	defaultBaseURL = "https://patrickscheid.de/s/"
-	userAgent      = "secretli-cli"
+	userAgent      = "secretli-cli/prototype"
 )
 
 type HTTPRemoteStore struct {
