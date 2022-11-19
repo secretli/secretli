@@ -1,14 +1,28 @@
 package internal
 
 import (
-	"net/http"
+	"fmt"
+	"github.com/go-resty/resty/v2"
+)
+
+const (
+	defaultBaseURL = "https://patrickscheid.de/s/"
+	userAgent      = "secretli-cli"
 )
 
 type HTTPRemoteStore struct {
-	client *Client
+	client *resty.Client
 }
 
-func NewHTTPRemoteStore(client *Client) *HTTPRemoteStore {
+func NewHTTPRemoteStore(baseURL string) *HTTPRemoteStore {
+	if baseURL == "" {
+		baseURL = defaultBaseURL
+	}
+
+	client := resty.New().
+		SetBaseURL(baseURL).
+		SetHeader("User-Agent", userAgent)
+
 	return &HTTPRemoteStore{client: client}
 }
 
@@ -24,22 +38,28 @@ func (s *HTTPRemoteStore) Store(keySet KeySet, data EncryptedData, expiration st
 	}
 
 	dto := request{
-		PublicID:       keySet.PublicID(),
-		RetrievalToken: keySet.RetrievalToken(),
-		DeletionToken:  keySet.DeletionToken(),
-		Nonce:          data.Nonce,
-		EncryptedData:  data.Cipher,
+		PublicID:       keySet.PublicID,
+		RetrievalToken: keySet.RetrievalToken,
+		DeletionToken:  keySet.DeletionToken,
+		Nonce:          B64Encode(data.Nonce),
+		EncryptedData:  B64Encode(data.Cipher),
 		Expiration:     expiration,
 		BurnAfterRead:  burnAfterRead,
 	}
 
-	req, err := s.client.NewRequest(http.MethodPost, "api/secret", dto)
+	resp, err := s.client.R().
+		SetBody(dto).
+		Post("api/secret")
+
 	if err != nil {
 		return err
 	}
 
-	_, err = s.client.Do(req, nil)
-	return err
+	if resp.IsError() {
+		return fmt.Errorf("error sharing secret: %d", resp.StatusCode())
+	}
+
+	return nil
 }
 
 func (s *HTTPRemoteStore) Load(keySet KeySet) (EncryptedData, error) {
@@ -48,35 +68,53 @@ func (s *HTTPRemoteStore) Load(keySet KeySet) (EncryptedData, error) {
 		EncryptedData string `json:"encrypted_data"`
 	}
 
-	req, err := s.client.NewRequest(http.MethodPost, "api/secret/"+keySet.PublicID(), nil)
-	if err != nil {
-		return EncryptedData{}, err
-	}
-	req.Header.Set("X-Retrieval-Token", keySet.RetrievalToken())
-
 	var dto response
-	_, err = s.client.Do(req, &dto)
+
+	resp, err := s.client.R().
+		SetPathParam("id", keySet.PublicID).
+		SetHeader("X-Retrieval-Token", keySet.RetrievalToken).
+		SetResult(&dto).
+		Post("api/secret/{id}")
+
 	if err != nil {
 		return EncryptedData{}, err
 	}
 
-	return EncryptedData{
-		Nonce:  dto.Nonce,
-		Cipher: dto.EncryptedData,
-	}, nil
+	if resp.IsError() {
+		return EncryptedData{}, fmt.Errorf("error loading secret: %d", resp.StatusCode())
+	}
+
+	nonce, err := B64Decode(dto.Nonce)
+	if err != nil {
+		return EncryptedData{}, err
+	}
+
+	cipher, err := B64Decode(dto.EncryptedData)
+	if err != nil {
+		return EncryptedData{}, err
+	}
+
+	data := EncryptedData{
+		Nonce:  nonce,
+		Cipher: cipher,
+	}
+	return data, nil
 }
 
 func (s *HTTPRemoteStore) Delete(keySet KeySet, deletionToken string) error {
-	req, err := s.client.NewRequest(http.MethodDelete, "api/secret/"+keySet.PublicID(), nil)
-	if err != nil {
-		return err
-	}
-	req.Header.Set("X-Retrieval-Token", keySet.RetrievalToken())
-	req.Header.Set("X-Deletion-Token", deletionToken)
+	resp, err := s.client.R().
+		SetPathParam("id", keySet.PublicID).
+		SetHeader("X-Retrieval-Token", keySet.RetrievalToken).
+		SetHeader("X-Deletion-Token", deletionToken).
+		Delete("api/secret/{id}")
 
-	_, err = s.client.Do(req, nil)
 	if err != nil {
 		return err
 	}
+
+	if resp.IsError() {
+		return fmt.Errorf("error deleting secret: %d", resp.StatusCode())
+	}
+
 	return nil
 }

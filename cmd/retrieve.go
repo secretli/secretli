@@ -21,31 +21,25 @@ The share secret is never sent to the server!
 `,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			var err error
-			var subkeys internal.KeySet
-
 			baseUrl, _ := cmd.Flags().GetString("base-url")
-			store, err := internal.SetupStore(baseUrl)
-			if err != nil {
-				return err
-			}
+			store := internal.NewHTTPRemoteStore(baseUrl)
 
+			pwd := ""
 			if password {
-				pwd := internal.GetPasswordFromTerminalOrDie()
-				subkeys, err = internal.KeySetWithPasswordFromString(args[0], pwd)
-			} else {
-				subkeys, err = internal.KeySetFromString(args[0])
+				pwd = internal.GetPasswordFromTerminalOrDie()
 			}
+
+			keySet, err := internal.KeySetFromString(args[0], pwd)
 			if err != nil {
 				return err
 			}
 
-			encryptedData, err := store.Load(subkeys)
+			encryptedData, err := store.Load(keySet)
 			if err != nil {
 				return err
 			}
 
-			plaintext, err := subkeys.Decrypt(encryptedData)
+			plaintext, err := keySet.Decrypt(encryptedData)
 			if err != nil {
 				return err
 			}

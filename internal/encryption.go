@@ -5,7 +5,6 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"crypto/sha512"
-	"encoding/base64"
 	"github.com/hashicorp/go-multierror"
 	"golang.org/x/crypto/hkdf"
 	"golang.org/x/crypto/pbkdf2"
@@ -13,107 +12,78 @@ import (
 )
 
 type EncryptedData struct {
-	Nonce  string
-	Cipher string
+	Nonce  []byte
+	Cipher []byte
 }
 
 type KeySet struct {
-	shareSecret    []byte
-	shareKey       []byte
-	publicID       []byte
-	retrievalToken []byte
-	deletionToken  []byte
+	ShareSecret    string
+	ShareKey       string
+	PublicID       string
+	RetrievalToken string
+	DeletionToken  string
 	cipher         cipher.AEAD
 }
 
-func NewRandomKeySet() (KeySet, error) {
-	shareSecret, err := generateRandomBytes(32)
-	if err != nil {
-		return KeySet{}, err
-	}
-	return deriveKeysFromBytes(shareSecret)
-}
-
-func NewRandomKeySetWithPassword(password string) (KeySet, error) {
+func NewKeySet(password string) (KeySet, error) {
 	shareSecret, err := generateRandomBytes(32)
 	if err != nil {
 		return KeySet{}, err
 	}
 
-	masterKey := pbkdf2.Key([]byte(password), shareSecret, 100000, 32, sha512.New)
+	if password == "" {
+		return deriveKeysFromBytes(shareSecret)
+	}
+
+	masterKey := pbkdf2.Key([]byte(password), shareSecret, 100_000, 32, sha512.New)
 	keySet, err := deriveKeysFromBytes(masterKey)
 	if err != nil {
 		return KeySet{}, err
 	}
 
-	keySet.shareSecret = shareSecret
+	keySet.ShareSecret = B64Encode(shareSecret)
 	return keySet, nil
 }
 
-func KeySetFromString(key string) (KeySet, error) {
-	shareSecret, err := decode(key)
-	if err != nil {
-		return KeySet{}, err
-	}
-	return deriveKeysFromBytes(shareSecret)
-}
-
-func KeySetWithPasswordFromString(key string, password string) (KeySet, error) {
-	shareSecret, err := decode(key)
+func KeySetFromString(key string, password string) (KeySet, error) {
+	shareSecret, err := B64Decode(key)
 	if err != nil {
 		return KeySet{}, err
 	}
 
-	masterKey := pbkdf2.Key([]byte(password), shareSecret, 100000, 32, sha512.New)
+	if password == "" {
+		return deriveKeysFromBytes(shareSecret)
+	}
+
+	masterKey := pbkdf2.Key([]byte(password), shareSecret, 100_000, 32, sha512.New)
 	keySet, err := deriveKeysFromBytes(masterKey)
 	if err != nil {
 		return KeySet{}, err
 	}
 
-	keySet.shareSecret = shareSecret
+	keySet.ShareSecret = B64Encode(shareSecret)
 	return keySet, nil
 }
 
-func (k KeySet) ShareSecret() string {
-	return encode(k.shareSecret)
-}
-
-func (k KeySet) PublicID() string {
-	return encode(k.publicID)
-}
-
-func (k KeySet) RetrievalToken() string {
-	return encode(k.retrievalToken)
-}
-
-func (k KeySet) DeletionToken() string {
-	return encode(k.deletionToken)
-}
-
-func (k KeySet) Encrypt(plaintext string) (data EncryptedData, err error) {
+func (k KeySet) Encrypt(plaintext string) (EncryptedData, error) {
 	nonce, err := generateRandomBytes(k.cipher.NonceSize())
 	if err != nil {
-		return
+		return EncryptedData{}, err
 	}
 
 	plainBytes := []byte(plaintext)
 	ciphertext := k.cipher.Seal(nil, nonce, plainBytes, nil)
 
-	data.Nonce = encode(nonce)
-	data.Cipher = encode(ciphertext)
-	return
+	data := EncryptedData{
+		Nonce:  nonce,
+		Cipher: ciphertext,
+	}
+
+	return data, nil
 }
 
 func (k KeySet) Decrypt(data EncryptedData) (string, error) {
-	nonce, err1 := decode(data.Nonce)
-	ciphertext, err2 := decode(data.Cipher)
-
-	err := multierror.Append(err1, err2).ErrorOrNil()
-	if err != nil {
-		return "", err
-	}
-
-	plaintext, err := k.cipher.Open(nil, nonce, ciphertext, nil)
+	plaintext, err := k.cipher.Open(nil, data.Nonce, data.Cipher, nil)
 	if err != nil {
 		return "", err
 	}
@@ -146,14 +116,16 @@ func deriveKeysFromBytes(key []byte) (KeySet, error) {
 		return KeySet{}, err
 	}
 
-	return KeySet{
-		shareSecret:    key,
-		shareKey:       shareKey,
-		publicID:       publicID,
-		retrievalToken: retrievalToken,
-		deletionToken:  deletionToken,
+	keySet := KeySet{
+		ShareSecret:    B64Encode(key),
+		ShareKey:       B64Encode(shareKey),
+		PublicID:       B64Encode(publicID),
+		RetrievalToken: B64Encode(retrievalToken),
+		DeletionToken:  B64Encode(deletionToken),
 		cipher:         gcm,
-	}, nil
+	}
+
+	return keySet, nil
 }
 
 func deriveSubkey(key []byte, info string, length int) ([]byte, error) {
@@ -175,12 +147,4 @@ func setupCipher(key []byte) (cipher.AEAD, error) {
 	}
 
 	return gcm, nil
-}
-
-func encode(input []byte) string {
-	return base64.RawURLEncoding.EncodeToString(input)
-}
-
-func decode(input string) ([]byte, error) {
-	return base64.RawURLEncoding.DecodeString(input)
 }

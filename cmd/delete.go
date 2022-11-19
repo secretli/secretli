@@ -19,23 +19,19 @@ The share secret is never sent to the server!
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			baseUrl, _ := cmd.Flags().GetString("base-url")
-			store, err := internal.SetupStore(baseUrl)
-			if err != nil {
-				return err
-			}
+			store := internal.NewHTTPRemoteStore(baseUrl)
 
-			var subkeys internal.KeySet
+			pwd := ""
 			if password {
-				pwd := internal.GetPasswordFromTerminalOrDie()
-				subkeys, err = internal.KeySetWithPasswordFromString(args[0], pwd)
-			} else {
-				subkeys, err = internal.KeySetFromString(args[0])
+				pwd = internal.GetPasswordFromTerminalOrDie()
 			}
+
+			keySet, err := internal.KeySetFromString(args[0], pwd)
 			if err != nil {
 				return err
 			}
 
-			return store.Delete(subkeys, args[1])
+			return store.Delete(keySet, args[1])
 		},
 	}
 

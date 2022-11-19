@@ -51,28 +51,24 @@ A user can select the following expiration times (default: 5 minutes).
 			}
 
 			baseUrl, _ := cmd.Flags().GetString("base-url")
-			store, err := internal.SetupStore(baseUrl)
-			if err != nil {
-				return err
-			}
+			store := internal.NewHTTPRemoteStore(baseUrl)
 
-			var subkeys internal.KeySet
+			pwd := ""
 			if password {
-				pwd := internal.GetPasswordFromTerminalOrDie()
-				subkeys, err = internal.NewRandomKeySetWithPassword(pwd)
-			} else {
-				subkeys, err = internal.NewRandomKeySet()
+				pwd = internal.GetPasswordFromTerminalOrDie()
 			}
+
+			keySet, err := internal.NewKeySet(pwd)
 			if err != nil {
 				return err
 			}
 
-			encrypted, err := subkeys.Encrypt(plaintext)
+			encrypted, err := keySet.Encrypt(plaintext)
 			if err != nil {
 				return err
 			}
 
-			err = store.Store(subkeys, encrypted, expiration, burnAfterRead)
+			err = store.Store(keySet, encrypted, expiration, burnAfterRead)
 			if err != nil {
 				return err
 			}
@@ -90,10 +86,10 @@ A user can select the following expiration times (default: 5 minutes).
 			fmt.Println("Success!")
 			fmt.Println()
 			fmt.Println("Want to retrieve your secret?")
-			fmt.Printf("$ secretli %sretrieve %s'%s'\n", baseUrlInOutput, pwdFlagInOutput, subkeys.ShareSecret())
+			fmt.Printf("$ secretli %sretrieve %s'%s'\n", baseUrlInOutput, pwdFlagInOutput, keySet.ShareSecret)
 			fmt.Println()
 			fmt.Println("Have to delete your secret?")
-			fmt.Printf("$ secretli %sdelete %s'%s' '%s'\n", baseUrlInOutput, pwdFlagInOutput, subkeys.ShareSecret(), subkeys.DeletionToken())
+			fmt.Printf("$ secretli %sdelete %s'%s' '%s'\n", baseUrlInOutput, pwdFlagInOutput, keySet.ShareSecret, keySet.DeletionToken)
 			fmt.Println()
 			return nil
 		},

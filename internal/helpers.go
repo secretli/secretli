@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"encoding/base64"
 	"fmt"
 	"github.com/mattn/go-tty"
 	"io"
@@ -33,16 +34,10 @@ func GetPasswordFromTerminalOrDie() string {
 	return strings.TrimSpace(password)
 }
 
-func SetupStore(baseUrl string) (*HTTPRemoteStore, error) {
-	var baseUrlFunc ClientOptionFunc
-	if baseUrl != "" {
-		baseUrlFunc = WithBaseURL(baseUrl)
-	}
+func B64Encode(input []byte) string {
+	return base64.RawURLEncoding.EncodeToString(input)
+}
 
-	client, err := NewClient(baseUrlFunc)
-	if err != nil {
-		return nil, err
-	}
-
-	return NewHTTPRemoteStore(client), nil
+func B64Decode(input string) ([]byte, error) {
+	return base64.RawURLEncoding.DecodeString(input)
 }
